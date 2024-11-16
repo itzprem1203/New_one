@@ -1,0 +1,51 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y python3-pip openjdk-17-jdk git zip
+        pip install --upgrade pip
+        pip install buildozer cython
+
+    - name: Initialize Buildozer
+      run: buildozer init
+
+    - name: Debug Buildozer Spec File
+      run: |
+        sed -i 's/^# \(source.include_exts = py,png,jpg,kv,atlas\)/\1/' buildozer.spec
+        sed -i 's/^# \(source.include_patterns = \)/\1*.kv/' buildozer.spec
+        sed -i 's/^# \(title = My Application\)/\1\npackage.name = hello_kivy\npackage.domain = com.example/' buildozer.spec
+        sed -i 's/^# \(requirements = python3\)/\1,kivy/' buildozer.spec
+        cat buildozer.spec  # Print the spec file for debugging
+
+    - name: Build APK
+      run: |
+        chmod +x buildozer
+        buildozer -v android debug
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: HelloKivy-debug.apk
+        path: bin/*.apk
